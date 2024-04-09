@@ -8,8 +8,8 @@
       "args": [],
       "stopAtEntry": false,
       "externalConsole": true,
-      "cwd": "c:/CSC471/final",
-      "program": "c:/CSC471/final/build/Debug/outDebug",
+      "cwd": "c:/CSC471/final/csc476-lab1/src",
+      "program": "c:/CSC471/final/csc476-lab1/src/build/Debug/outDebug",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [

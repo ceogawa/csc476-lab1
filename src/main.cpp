@@ -50,8 +50,8 @@ public:
 
 	//our geometry
 	shared_ptr<Shape> sphere;
-
-	shared_ptr<Shape> cube;
+	
+	shared_ptr<Shape> bunny;
 
 	//global data for ground plane - direct load constant defined CPU data to GPU (not obj)
 	GLuint GrndBuffObj, GrndNorBuffObj, GrndTexBuffObj, GIndxBuffObj;
@@ -157,24 +157,24 @@ public:
 		if (key == GLFW_KEY_M && action == GLFW_RELEASE) {
 			materialKey ++;
 		}
-		if (key == GLFW_KEY_D && action == GLFW_PRESS) {
+		if (key == GLFW_KEY_D && action == GLFW_REPEAT) {
 			g_lookAt += 0.3f * normalize(cross(view, vec3(0, 1, 0)));
             g_eye += 0.3f * normalize(cross(view, vec3(0, 1, 0)));
            
 			view = normalize(g_lookAt - g_eye);
         }
-        if (key == GLFW_KEY_A && action == GLFW_PRESS) {
+        if (key == GLFW_KEY_A && action == GLFW_REPEAT) {
 			g_lookAt -= 0.3f * normalize(cross(view, vec3(0, 1, 0)));
             g_eye -= 0.3f * normalize(cross(view, vec3(0, 1, 0)));
 			view = normalize(g_lookAt - g_eye);
         }
-        if (key == GLFW_KEY_W && action == GLFW_PRESS) {
+        if (key == GLFW_KEY_W && action == GLFW_REPEAT) {
 			g_lookAt += 0.3f * view;
             g_eye += 0.3f * view;
            
 		   	view = normalize(g_lookAt - g_eye);
         }
-        if (key == GLFW_KEY_S && action == GLFW_PRESS) {
+        if (key == GLFW_KEY_S && action == GLFW_REPEAT) {
 			g_lookAt -= 0.3f * view;
             g_eye -= 0.3f * view;
         
@@ -196,28 +196,28 @@ public:
 	}
 
 
-void scrollCallback(GLFWwindow* window, double deltaX, double deltaY) {
-    // Adjust polar and azimuthal angles (phi and theta) based on mouse scroll input
-    g_phi -= 0.3 * deltaY;
-    g_theta += 0.3 * deltaX;
+	void scrollCallback(GLFWwindow* window, double deltaX, double deltaY) {
+		// Adjust polar and azimuthal angles (phi and theta) based on mouse scroll input
+		g_phi -= 0.3 * deltaY;
+		g_theta += 0.3 * deltaX;
 
-    // Clamp phi to avoid flipping the camera
-    if (g_phi > 1.38) {
-        g_phi = 1.38;
-    } else if (g_phi < -1.38) {
-        g_phi = -1.38;
-    }
+		// Clamp phi to avoid flipping the camera
+		if (g_phi > 1.38) {
+			g_phi = 1.38;
+		} else if (g_phi < -1.38) {
+			g_phi = -1.38;
+		}
 
-    // Calculate new camera look-at point based on phi, theta, and spherical radius
-    float radius = 6.0f;  // Adjust the radius as needed
-    float x = radius * cos(g_phi) * cos(g_theta);
-    float y = radius * sin(g_phi);
-    float z = radius * cos(g_phi) * sin(g_theta);
+		// Calculate new camera look-at point based on phi, theta, and spherical radius
+		float radius = 6.0f;  // Adjust the radius as needed
+		float x = radius * cos(g_phi) * cos(g_theta);
+		float y = radius * sin(g_phi);
+		float z = radius * cos(g_phi) * sin(g_theta);
 
-    g_lookAt = g_eye + vec3(x, y, z);
-    view = normalize(g_lookAt - g_eye);
+		g_lookAt = g_eye + vec3(x, y, z);
+		view = normalize(g_lookAt - g_eye);
 
-}
+	}
 
 
 	void resizeCallback(GLFWwindow *window, int width, int height)
@@ -360,24 +360,29 @@ void scrollCallback(GLFWwindow* window, double deltaX, double deltaY) {
 			sphere->init();
 		}
 
-	
-		vector<tinyobj::shape_t> cubeShapes;
- 		rc = tinyobj::LoadObj(cubeShapes, objMaterials, errStr, (resourceDirectory + "/cube.obj").c_str());
+		vector<tinyobj::shape_t> bunnyShapes;
+ 		vector<tinyobj::material_t> bunnyMaterials;
+
+		//load in the mesh and make the shape(s)
+ 		rc = tinyobj::LoadObj(bunnyShapes, bunnyMaterials, errStr, (resourceDirectory + "/bunny.obj").c_str());
 		if (!rc) {
 			cerr << errStr << endl;
 		} else {
-			//for now all our shapes will not have textures - change in later labs
-			cube = make_shared<Shape>(false);
-			cube->createShape(cubeShapes[0]);
-			cube->measure();
-			cube->init();
-		}		
+			bunny = make_shared<Shape>(false);
+			bunny->createShape(bunnyShapes[0]);
+			bunny->measure();
+			bunny->init();
+		}
+
+		initGround();
+
+	}	
 
 	//directly pass quad for the ground to the GPU
 	void initGround() {
 
 		float g_groundSize = 20;
-		float g_groundY = -0.25;
+		float g_groundY = -1;
 
   		// A x-z plane at y = g_groundY of dimension [-g_groundSize, g_groundSize]^2
 		float GrndPos[] = {
@@ -562,6 +567,20 @@ void scrollCallback(GLFWwindow* window, double deltaX, double deltaY) {
 		// Apply perspective projection.
 		Projection->pushMatrix();
 		Projection->perspective(45.0f, aspect, 0.01f, 100.0f);
+
+		// drawing orange//////////////////////////////////////////////////////////////////////////
+		toonShader->bind();
+		//send the projetion and view for solid shader
+		glUniformMatrix4fv(toonShader->getUniform("P"), 1, GL_FALSE, value_ptr(Projection->topMatrix()));
+		SetView(toonShader);
+		glUniform3f(toonShader->getUniform("lightPos"), 2.0+lightTrans, 2.0, 2.9);
+
+		//orange
+		SetMaterial(1);
+		//use helper function that uses glm to create some transform matrices
+		SetModel(toonShader, vec3(1.8, -.1, 1.6), 0, 0, 2, 2, 2);
+
+		bunny->draw(toonShader);
 	
 		// Draw the doggos
 		texProg->bind();
@@ -569,24 +588,21 @@ void scrollCallback(GLFWwindow* window, double deltaX, double deltaY) {
 		SetView(texProg);
 		glUniform3f(texProg->getUniform("lightPos"), 2.0+lightTrans, 2.0, 2.9);
 		glUniform1f(texProg->getUniform("MatShine"), 27.9);
-		glUniform1i(texProg->getUniform("flip"), 1);
-		texture2->bind(texProg->getUniform("Texture0"));
-		Model->pushMatrix();
-
 		//draw SKYBOX 
 		glUniform1i(texProg->getUniform("flip"), 0);
+
 		texture1->bind(texProg->getUniform("Texture0"));
 		Model->pushMatrix();
 			Model->loadIdentity();
 			Model->translate(vec3(1, 0, -1));
-			Model->scale(vec3(12, 17, 12));
+			Model->scale(vec3(50, 18, 50));
 			setModel(texProg, Model);
 			sphere->draw(texProg);
 		Model->popMatrix();
 
 		glUniform1i(texProg->getUniform("flip"), 1);
 		drawGround(texProg);
-		
+
 		Projection->popMatrix();
 
 	}
