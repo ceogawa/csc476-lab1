@@ -6,7 +6,7 @@ in vec3 fragNor;
 in vec3 lightDir;
 
 uniform vec3 lightColor;
-uniform int increments = 4;
+uniform int increments = 5;
 uniform vec3 objectColor;
 
 void main()
